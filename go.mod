@@ -1,0 +1,12 @@
+module github.com/Lslightly/pprof2csv
+
+go 1.24.2
+
+require github.com/google/pprof v0.0.0-20241101162523-b92577c0c142
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/stretchr/testify v1.11.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+)
