@@ -1,0 +1,10 @@
+main.busyWork
+test/loop/test.go:13,for i < 10000000
+
+main.benchmarkFunction
+test/loop/test.go:29,cmp data
+test/loop/test.go:23,data[i] = rand.Intn(1000)
+test/loop/test.go:30,data swap
+
+main.main
+test/loop/test.go:69,benchmarkFunction

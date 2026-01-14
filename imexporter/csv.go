@@ -25,7 +25,7 @@ func (e *CSVExporter) Export(w io.Writer, lines []*models.SourceLine) error {
 	defer csvWriter.Flush()
 
 	// Write header
-	header := []string{"file", "line", "function", "cum", "flat"}
+	header := []string{"file", "line", "function", "flat", "cum"}
 	if err := csvWriter.Write(header); err != nil {
 		return fmt.Errorf("failed to write CSV header: %w", err)
 	}
@@ -33,15 +33,15 @@ func (e *CSVExporter) Export(w io.Writer, lines []*models.SourceLine) error {
 	// Write data rows
 	for _, line := range lines {
 		// Convert nanoseconds to human-readable time format (e.g., 1.234ms)
-		cumulativeTimeStr := formatDuration(time.Duration(line.Cum))
-		flatTimeStr := formatDuration(time.Duration(line.Flat))
+		cumulativeTimeStr := common.FormatDuration(time.Duration(line.Cum))
+		flatTimeStr := common.FormatDuration(time.Duration(line.Flat))
 
 		record := []string{
 			line.Filename,
 			fmt.Sprintf("%d", line.LineNumber),
 			line.FunctionName,
-			cumulativeTimeStr,
 			flatTimeStr,
+			cumulativeTimeStr,
 		}
 
 		if err := csvWriter.Write(record); err != nil {
@@ -57,25 +57,14 @@ func (e *CSVExporter) Export(w io.Writer, lines []*models.SourceLine) error {
 	return nil
 }
 
-// formatDuration converts a duration to a human-readable string
-// Returns values like "1.234ms", "5.678µs", "9.012ns", or "1.234s"
-func formatDuration(d time.Duration) string {
-	if d == 0 {
-		return "0ns"
-	}
-
-	// Use String() method which provides good formatting
-	return d.String()
-}
-
 // buildSourceLine build SourceLine from record
 func buildSourceLine(record []string) *models.SourceLine {
 	return &models.SourceLine{
 		Filename:     record[0],
 		LineNumber:   common.ParseInt(record[1]),
 		FunctionName: record[2],
-		Cum:          common.ParseDuration(record[3]),
-		Flat:         common.ParseDuration(record[4]),
+		Cum:          common.ParseDuration(record[4]),
+		Flat:         common.ParseDuration(record[3]),
 	}
 }
 

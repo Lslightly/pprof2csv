@@ -38,7 +38,6 @@ func main() {
 	}
 
 	// Create components
-	profileAnalyzer := analyzer.New()
 	csvExporter := imexporter.New()
 
 	// Load profile data
@@ -49,7 +48,7 @@ func main() {
 	}
 
 	// Analyze profile data
-	sourceLines, err := profileAnalyzer.Analyze(data)
+	sourceLines, err := analyzer.Analyze(data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error analyzing profile: %v\n", err)
 		os.Exit(1)

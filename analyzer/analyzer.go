@@ -2,20 +2,13 @@ package analyzer
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
 	"github.com/Lslightly/pprof2csv/models"
 	"github.com/google/pprof/profile"
 )
-
-// ProfileAnalyzer analyzes pprof profile data to extract source line timing information
-type ProfileAnalyzer struct{}
-
-// New creates a new ProfileAnalyzer instance
-func New() *ProfileAnalyzer {
-	return &ProfileAnalyzer{}
-}
 
 func convTimeUnit(s string) time.Duration {
 	switch s {
@@ -28,7 +21,7 @@ func convTimeUnit(s string) time.Duration {
 }
 
 // Analyze parses the pprof profile data and extracts source line timing information
-func (a *ProfileAnalyzer) Analyze(data []byte) ([]*models.SourceLine, error) {
+func Analyze(data []byte) ([]*models.SourceLine, error) {
 	p, err := profile.ParseData(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse profile data: %w", err)
@@ -101,4 +94,20 @@ func (a *ProfileAnalyzer) Analyze(data []byte) ([]*models.SourceLine, error) {
 	})
 
 	return result, nil
+}
+
+func LoadProfileData(filename string) ([]*models.SourceLine, error) {
+	// Load profile data
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("error loading profile: %v", err)
+	}
+
+	// Analyze profile data
+	allLines, err := Analyze(data)
+	if err != nil {
+		return nil, fmt.Errorf("error analyzing profile: %v", err)
+	}
+
+	return allLines, nil
 }
