@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Lslightly/pprof2csv/common"
-	"github.com/Lslightly/pprof2csv/internal"
+	"github.com/Lslightly/pprof2csv/models"
 )
 
 // CSVExporter converts source line timing data to CSV format
@@ -20,7 +20,7 @@ func New() *CSVExporter {
 }
 
 // Export writes the source line data to a CSV writer
-func (e *CSVExporter) Export(w io.Writer, lines []*internal.SourceLine) error {
+func (e *CSVExporter) Export(w io.Writer, lines []*models.SourceLine) error {
 	csvWriter := csv.NewWriter(w)
 	defer csvWriter.Flush()
 
@@ -69,8 +69,8 @@ func formatDuration(d time.Duration) string {
 }
 
 // buildSourceLine build SourceLine from record
-func buildSourceLine(record []string) *internal.SourceLine {
-	return &internal.SourceLine{
+func buildSourceLine(record []string) *models.SourceLine {
+	return &models.SourceLine{
 		Filename:     record[0],
 		LineNumber:   common.ParseInt(record[1]),
 		FunctionName: record[2],
@@ -79,7 +79,7 @@ func buildSourceLine(record []string) *internal.SourceLine {
 	}
 }
 
-func Import(r io.Reader) (sls []*internal.SourceLine) {
+func Import(r io.Reader) (sls []*models.SourceLine) {
 	csvReader := csv.NewReader(r)
 	rs, err := csvReader.ReadAll()
 	if err != nil {

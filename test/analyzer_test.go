@@ -12,7 +12,7 @@ import (
 
 	"github.com/Lslightly/pprof2csv/common"
 	"github.com/Lslightly/pprof2csv/imexporter"
-	"github.com/Lslightly/pprof2csv/internal"
+	"github.com/Lslightly/pprof2csv/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +38,7 @@ func rootdir() string {
 	return filepath.Dir(curdir())
 }
 
-func assertCum(t *testing.T, cum time.Duration, sls []*internal.SourceLine, fileEndPart string, line int) {
+func assertCum(t *testing.T, cum time.Duration, sls []*models.SourceLine, fileEndPart string, line int) {
 	for _, sl := range sls {
 		if !strings.HasSuffix(sl.Filename, fileEndPart) {
 			continue

@@ -7,8 +7,6 @@ import (
 
 	"github.com/Lslightly/pprof2csv/analyzer"
 	"github.com/Lslightly/pprof2csv/imexporter"
-	"github.com/Lslightly/pprof2csv/internal"
-	"github.com/Lslightly/pprof2csv/loader"
 )
 
 // Version of the tool (set at build time)
@@ -40,12 +38,11 @@ func main() {
 	}
 
 	// Create components
-	profileLoader := loader.New()
 	profileAnalyzer := analyzer.New()
 	csvExporter := imexporter.New()
 
 	// Load profile data
-	data, err := profileLoader.Load(*inputFile)
+	data, err := os.ReadFile(*inputFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading profile: %v\n", err)
 		os.Exit(1)
@@ -74,7 +71,7 @@ func main() {
 		defer output.Close()
 	}
 
-	err = csvExporter.Export(output, []*internal.SourceLine(sourceLines))
+	err = csvExporter.Export(output, sourceLines)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error exporting CSV: %v\n", err)
 		os.Exit(1)

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Lslightly/pprof2csv/internal"
+	"github.com/Lslightly/pprof2csv/models"
 	"github.com/google/pprof/profile"
 )
 
@@ -28,7 +28,7 @@ func convTimeUnit(s string) time.Duration {
 }
 
 // Analyze parses the pprof profile data and extracts source line timing information
-func (a *ProfileAnalyzer) Analyze(data []byte) ([]*internal.SourceLine, error) {
+func (a *ProfileAnalyzer) Analyze(data []byte) ([]*models.SourceLine, error) {
 	p, err := profile.ParseData(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse profile data: %w", err)
@@ -37,7 +37,7 @@ func (a *ProfileAnalyzer) Analyze(data []byte) ([]*internal.SourceLine, error) {
 	timeUnit := convTimeUnit(p.SampleType[1].Unit)
 
 	// Create map to aggregate time by source line
-	lineMap := make(map[string]*internal.SourceLine)
+	lineMap := make(map[string]*models.SourceLine)
 	// Process each sample in the profile
 	for _, sample := range p.Sample {
 		// Get the value (time) for this sample
@@ -77,7 +77,7 @@ func (a *ProfileAnalyzer) Analyze(data []byte) ([]*internal.SourceLine, error) {
 					sl.Cum += time.Duration(value) * timeUnit
 					sl.Flat += time.Duration(flatTime) * timeUnit
 				} else {
-					lineMap[key] = &internal.SourceLine{
+					lineMap[key] = &models.SourceLine{
 						Filename:     line.Function.Filename,
 						LineNumber:   int(line.Line),
 						FunctionName: line.Function.Name,
@@ -90,7 +90,7 @@ func (a *ProfileAnalyzer) Analyze(data []byte) ([]*internal.SourceLine, error) {
 	}
 
 	// Convert map to sorted slice
-	result := make([]*internal.SourceLine, 0, len(lineMap))
+	result := make([]*models.SourceLine, 0, len(lineMap))
 	for _, line := range lineMap {
 		result = append(result, line)
 	}
