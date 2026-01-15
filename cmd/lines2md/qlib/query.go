@@ -2,16 +2,27 @@ package qlib
 
 import (
 	"bufio"
+	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Lslightly/pprof2csv/common"
-	"github.com/Lslightly/pprof2csv/imexporter"
 	"github.com/Lslightly/pprof2csv/models"
 )
+
+// QueryResult represents query results with code information
+type QueryResult struct {
+	Filename   string
+	LineNumber int
+	Code       string
+	Cum        time.Duration // Cumulative time
+	Flat       time.Duration // Flat time (time spent directly in this function)
+}
 
 // QuerySection represents a section in the query file
 type QuerySection struct {
@@ -167,26 +178,61 @@ func (querySection QuerySection) WriteFunctionCSV(outputDir string, matchedResul
 	}
 	defer csvFile.Close()
 
-	writer := imexporter.New()
-
-	// Create SourceLine objects for export
-	var sourceLines []*models.SourceLine
+	// Create QueryResult objects for export
+	var queryResults []*QueryResult
 	for _, query := range querySection.Queries {
 		key := fmt.Sprintf("%s:%d", query.Filename, query.LineNumber)
 		if resultLine, exists := matchedResults[key]; exists {
-			sourceLines = append(sourceLines, &models.SourceLine{
-				Filename:     query.Filename,
-				LineNumber:   query.LineNumber,
-				FunctionName: query.Code,
-				Cum:          resultLine.Cum,
-				Flat:         resultLine.Flat,
+			queryResults = append(queryResults, &QueryResult{
+				Filename:   query.Filename,
+				LineNumber: query.LineNumber,
+				Code:       query.Code,
+				Cum:        resultLine.Cum,
+				Flat:       resultLine.Flat,
 			})
 		}
 	}
 
-	err = writer.Export(csvFile, sourceLines)
+	err = exportQueryResults(csvFile, queryResults)
 	if err != nil {
 		return fmt.Errorf("error writing CSV file: %v", err)
+	}
+
+	return nil
+}
+
+// exportQueryResults writes QueryResult data to CSV with header: file,line,code,cum,flat
+func exportQueryResults(w io.Writer, results []*QueryResult) error {
+	csvWriter := csv.NewWriter(w)
+	defer csvWriter.Flush()
+
+	// Write header
+	header := []string{"file", "line", "code", "cum", "flat"}
+	if err := csvWriter.Write(header); err != nil {
+		return fmt.Errorf("failed to write CSV header: %w", err)
+	}
+
+	// Write data rows
+	for _, result := range results {
+		cumulativeTimeStr := common.FormatDuration(result.Cum)
+		flatTimeStr := common.FormatDuration(result.Flat)
+
+		record := []string{
+			result.Filename,
+			fmt.Sprintf("%d", result.LineNumber),
+			result.Code,
+			cumulativeTimeStr,
+			flatTimeStr,
+		}
+
+		if err := csvWriter.Write(record); err != nil {
+			return fmt.Errorf("failed to write CSV record for %s:%d: %w", result.Filename, result.LineNumber, err)
+		}
+	}
+
+	// Check for any errors during writing
+	if err := csvWriter.Error(); err != nil {
+		return fmt.Errorf("error flushing CSV data: %w", err)
 	}
 
 	return nil
