@@ -60,8 +60,12 @@ func CurFileDir() string {
 	return callerDir(1)
 }
 
-func AbsPath(relativePath string) string {
+func AbsPathFromRoot(relativePath string) string {
 	return filepath.Join(RootDir(), relativePath)
+}
+
+func AbsPathFromCur(relativePath string) string {
+	return filepath.Join(callerDir(2), relativePath)
 }
 
 func Runcmd(cwd, name string, args ...string) (cmd *exec.Cmd, err error) {

@@ -1,0 +1,5 @@
+mallocgcSmallScanNoHeader
+src/runtime/malloc.go:1399,span.freeIndexForScan = span.freeindex
+
+mallocgcSmallNoscan
+src/runtime/malloc.go:1308,span.freeIndexForScan = span.freeindex
