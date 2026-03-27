@@ -10,3 +10,10 @@ type SourceLine struct {
 	Cum          time.Duration // Cumulative time
 	Flat         time.Duration // Flat time (time spent directly in this function)
 }
+
+// FunctionStat represents aggregated timing information for a specific function
+type FunctionStat struct {
+	FunctionName string
+	Cum          time.Duration // Cumulative time (self + callees)
+	Flat         time.Duration // Flat time (time spent directly in this function)
+}

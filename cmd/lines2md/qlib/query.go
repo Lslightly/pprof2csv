@@ -143,7 +143,7 @@ func findMatchingLines(allLines []*models.SourceLine, query Query) []*models.Sou
 	return matchedLines
 }
 
-func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[string]*models.SourceLine) string {
+func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[string]*models.SourceLine, funcStats map[string]*models.FunctionStat) string {
 	var markdownContent strings.Builder
 
 	for _, section := range querySections {
@@ -151,6 +151,24 @@ func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[st
 			continue
 		}
 
+		// function-level summary for this section's function name
+		var funcFlat, funcCum time.Duration
+		if stat, ok := funcStats[section.FunctionName]; ok {
+			funcFlat = stat.Flat
+			funcCum = stat.Cum
+		} else {
+			// if no function-level stats found, leave as zero and emit a warning
+			fmt.Fprintf(os.Stderr, "Warning: no function stats found for %s\n", section.FunctionName)
+		}
+
+		funcFlatStr := common.FormatDuration(funcFlat)
+		funcCumStr := common.FormatDuration(funcCum)
+
+		// section title and function summary
+		fmt.Fprintf(&markdownContent, "## %s\n\n", section.FunctionName)
+		fmt.Fprintf(&markdownContent, "**function flat:** %s  **function cum:** %s\n\n", funcFlatStr, funcCumStr)
+
+		// per-line details table
 		var table strings.Builder
 		table.WriteString("| line | code | flat | cum |\n|---|---|---|---|\n")
 
@@ -164,7 +182,7 @@ func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[st
 			fmt.Fprintf(&table, "| %s:%d | %s | %s | %s |\n", query.Filename, query.LineNumber, query.Code, flatStr, cumStr)
 		}
 
-		fmt.Fprintf(&markdownContent, "## %s\n\n%s\n", section.FunctionName, table.String())
+		fmt.Fprintf(&markdownContent, "%s\n", table.String())
 	}
 
 	return markdownContent.String()

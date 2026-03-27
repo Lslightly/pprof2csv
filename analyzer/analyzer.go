@@ -20,17 +20,24 @@ func convTimeUnit(s string) time.Duration {
 	}
 }
 
-// Analyze parses the pprof profile data and extracts source line timing information
-func Analyze(data []byte) ([]*models.SourceLine, error) {
+// AnalyzeWithFunctionStats parses the pprof profile data and extracts both
+// source line timing information and per-function aggregated timing
+// (flat: self time, cum: self + callees).
+// It returns:
+//   - lines: per-source-line stats sorted by cumulative time descending
+//   - funcStats: map keyed by function name with flat/cum times.
+func AnalyzeWithFunctionStats(data []byte) ([]*models.SourceLine, map[string]*models.FunctionStat, error) {
 	p, err := profile.ParseData(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse profile data: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse profile data: %w", err)
 	}
 
 	timeUnit := convTimeUnit(p.SampleType[1].Unit)
 
-	// Create map to aggregate time by source line
+	// Create maps to aggregate time by source line and by function
 	lineMap := make(map[string]*models.SourceLine)
+	funcMap := make(map[string]*models.FunctionStat)
+
 	// Process each sample in the profile
 	for _, sample := range p.Sample {
 		// Get the value (time) for this sample
@@ -65,24 +72,40 @@ func Analyze(data []byte) ([]*models.SourceLine, error) {
 					flatTime = value
 				}
 
+				cumDelta := time.Duration(value) * timeUnit
+				flatDelta := time.Duration(flatTime) * timeUnit
+
 				// Update or create entry for this source line
 				if sl, exists := lineMap[key]; exists {
-					sl.Cum += time.Duration(value) * timeUnit
-					sl.Flat += time.Duration(flatTime) * timeUnit
+					sl.Cum += cumDelta
+					sl.Flat += flatDelta
 				} else {
 					lineMap[key] = &models.SourceLine{
 						Filename:     line.Function.Filename,
 						LineNumber:   int(line.Line),
 						FunctionName: line.Function.Name,
-						Cum:          time.Duration(value) * timeUnit,
-						Flat:         time.Duration(flatTime) * timeUnit,
+						Cum:          cumDelta,
+						Flat:         flatDelta,
+					}
+				}
+
+				// Update or create entry for this function (function-level stats)
+				fn := line.Function.Name
+				if fs, exists := funcMap[fn]; exists {
+					fs.Cum += cumDelta
+					fs.Flat += flatDelta
+				} else {
+					funcMap[fn] = &models.FunctionStat{
+						FunctionName: fn,
+						Cum:          cumDelta,
+						Flat:         flatDelta,
 					}
 				}
 			}
 		}
 	}
 
-	// Convert map to sorted slice
+	// Convert map to sorted slice for line-level stats
 	result := make([]*models.SourceLine, 0, len(lineMap))
 	for _, line := range lineMap {
 		result = append(result, line)
@@ -93,21 +116,36 @@ func Analyze(data []byte) ([]*models.SourceLine, error) {
 		return result[i].Cum > result[j].Cum
 	})
 
-	return result, nil
+	return result, funcMap, nil
 }
 
-func LoadProfileData(filename string) ([]*models.SourceLine, error) {
+// Analyze parses the pprof profile data and extracts source line timing information.
+// It is kept for backward compatibility and discards function-level aggregation.
+func Analyze(data []byte) ([]*models.SourceLine, error) {
+	lines, _, err := AnalyzeWithFunctionStats(data)
+	return lines, err
+}
+
+// LoadProfileDataWithFunctionStats loads profile data from the specified file
+// and returns both per-line and per-function statistics.
+func LoadProfileDataWithFunctionStats(filename string) ([]*models.SourceLine, map[string]*models.FunctionStat, error) {
 	// Load profile data
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("error loading profile: %v", err)
+		return nil, nil, fmt.Errorf("error loading profile: %v", err)
 	}
 
 	// Analyze profile data
-	allLines, err := Analyze(data)
+	allLines, funcStats, err := AnalyzeWithFunctionStats(data)
 	if err != nil {
-		return nil, fmt.Errorf("error analyzing profile: %v", err)
+		return nil, nil, fmt.Errorf("error analyzing profile: %v", err)
 	}
 
-	return allLines, nil
+	return allLines, funcStats, nil
+}
+
+// LoadProfileData loads profile data and only returns per-source-line statistics.
+func LoadProfileData(filename string) ([]*models.SourceLine, error) {
+	allLines, _, err := LoadProfileDataWithFunctionStats(filename)
+	return allLines, err
 }

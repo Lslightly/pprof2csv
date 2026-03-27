@@ -67,8 +67,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Load and analyze profile data
-	allLines, err := analyzer.LoadProfileData(*inputProfile)
+	// Load and analyze profile data (both per-line and per-function stats)
+	allLines, funcStats, err := analyzer.LoadProfileDataWithFunctionStats(*inputProfile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -85,10 +85,10 @@ func main() {
 	matchedResults := qlib.MatchQueries(querySections, allLines)
 
 	// Generate and write CSV files for each function
-	exportMatchedResults(querySections, matchedResults)
+	exportMatchedResults(querySections, matchedResults, funcStats)
 }
 
-func exportMatchedResults(querySections []qlib.QuerySection, matchedResults map[string]*models.SourceLine) {
+func exportMatchedResults(querySections []qlib.QuerySection, matchedResults map[string]*models.SourceLine, funcStats map[string]*models.FunctionStat) {
 	for _, section := range querySections {
 		if len(section.Queries) == 0 {
 			continue
@@ -99,8 +99,8 @@ func exportMatchedResults(querySections []qlib.QuerySection, matchedResults map[
 		}
 	}
 
-	// Generate and write markdown content
-	markdownContent := qlib.GenerateMarkdownContent(querySections, matchedResults)
+	// Generate and write markdown content (includes per-function flat/cum summary)
+	markdownContent := qlib.GenerateMarkdownContent(querySections, matchedResults, funcStats)
 	if err := writeCollectMD(markdownContent); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
