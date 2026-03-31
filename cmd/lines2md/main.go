@@ -16,6 +16,7 @@ var (
 	inputProfile = flag.String("i", "", "Input pprof profile file")
 	queryFile    = flag.String("q", "", "Query file containing lines to analyze")
 	outputDir    = flag.String("dir", ".", "Output directory for results")
+	showFrom     = flag.String("show_from", "", "Only include samples whose stacktrace contains this function")
 )
 
 func init() {
@@ -68,7 +69,7 @@ func main() {
 	}
 
 	// Load and analyze profile data (both per-line and per-function stats)
-	allLines, funcStats, err := analyzer.LoadProfileDataWithFunctionStats(*inputProfile)
+	allLines, funcStats, err := analyzer.LoadProfileDataWithFunctionStats(*inputProfile, *showFrom)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

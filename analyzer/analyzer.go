@@ -23,10 +23,12 @@ func convTimeUnit(s string) time.Duration {
 // AnalyzeWithFunctionStats parses the pprof profile data and extracts both
 // source line timing information and per-function aggregated timing
 // (flat: self time, cum: self + callees).
+// If showFrom is non-empty, only samples whose stacktrace contains the specified
+// function are included in the analysis.
 // It returns:
 //   - lines: per-source-line stats sorted by cumulative time descending
 //   - funcStats: map keyed by function name with flat/cum times.
-func AnalyzeWithFunctionStats(data []byte) ([]*models.SourceLine, map[string]*models.FunctionStat, error) {
+func AnalyzeWithFunctionStats(data []byte, showFrom string) ([]*models.SourceLine, map[string]*models.FunctionStat, error) {
 	p, err := profile.ParseData(data)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse profile data: %w", err)
@@ -40,6 +42,23 @@ func AnalyzeWithFunctionStats(data []byte) ([]*models.SourceLine, map[string]*mo
 
 	// Process each sample in the profile
 	for _, sample := range p.Sample {
+		// Filter: skip sample if showFrom specified but not found in stacktrace
+		if showFrom != "" {
+			found := false
+		locationLoop:
+			for _, loc := range sample.Location {
+				for _, le := range loc.Line {
+					if le.Function != nil && le.Function.Name == showFrom {
+						found = true
+						break locationLoop
+					}
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
 		// Get the value (time) for this sample
 		var value int64
 		if len(sample.Value) > 0 {
@@ -120,15 +139,19 @@ func AnalyzeWithFunctionStats(data []byte) ([]*models.SourceLine, map[string]*mo
 }
 
 // Analyze parses the pprof profile data and extracts source line timing information.
+// If showFrom is non-empty, only samples whose stacktrace contains the specified
+// function are included in the analysis.
 // It is kept for backward compatibility and discards function-level aggregation.
-func Analyze(data []byte) ([]*models.SourceLine, error) {
-	lines, _, err := AnalyzeWithFunctionStats(data)
+func Analyze(data []byte, showFrom string) ([]*models.SourceLine, error) {
+	lines, _, err := AnalyzeWithFunctionStats(data, showFrom)
 	return lines, err
 }
 
 // LoadProfileDataWithFunctionStats loads profile data from the specified file
 // and returns both per-line and per-function statistics.
-func LoadProfileDataWithFunctionStats(filename string) ([]*models.SourceLine, map[string]*models.FunctionStat, error) {
+// If showFrom is non-empty, only samples whose stacktrace contains the specified
+// function are included in the analysis.
+func LoadProfileDataWithFunctionStats(filename string, showFrom string) ([]*models.SourceLine, map[string]*models.FunctionStat, error) {
 	// Load profile data
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -136,7 +159,7 @@ func LoadProfileDataWithFunctionStats(filename string) ([]*models.SourceLine, ma
 	}
 
 	// Analyze profile data
-	allLines, funcStats, err := AnalyzeWithFunctionStats(data)
+	allLines, funcStats, err := AnalyzeWithFunctionStats(data, showFrom)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error analyzing profile: %v", err)
 	}
@@ -145,7 +168,7 @@ func LoadProfileDataWithFunctionStats(filename string) ([]*models.SourceLine, ma
 }
 
 // LoadProfileData loads profile data and only returns per-source-line statistics.
-func LoadProfileData(filename string) ([]*models.SourceLine, error) {
-	allLines, _, err := LoadProfileDataWithFunctionStats(filename)
+func LoadProfileData(filename string, showFrom string) ([]*models.SourceLine, error) {
+	allLines, _, err := LoadProfileDataWithFunctionStats(filename, showFrom)
 	return allLines, err
 }

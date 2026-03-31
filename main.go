@@ -18,6 +18,7 @@ func main() {
 		versionFlag = flag.Bool("version", false, "Show version information")
 		outputFile  = flag.String("o", "", "Output CSV file (default: stdout)")
 		inputFile   = flag.String("i", "", "Input pprof profile file")
+		showFrom    = flag.String("show_from", "", "Only include samples whose stacktrace contains this function")
 	)
 
 	// Parse flags
@@ -48,7 +49,7 @@ func main() {
 	}
 
 	// Analyze profile data
-	sourceLines, err := analyzer.Analyze(data)
+	sourceLines, err := analyzer.Analyze(data, *showFrom)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error analyzing profile: %v\n", err)
 		os.Exit(1)
