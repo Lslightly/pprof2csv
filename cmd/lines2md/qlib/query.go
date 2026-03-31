@@ -17,6 +17,7 @@ import (
 
 // QueryResult represents query results with code information
 type QueryResult struct {
+	Found      bool // whether the code is found
 	Filename   string
 	LineNumber int
 	Code       string
@@ -128,18 +129,6 @@ func findMatchingLines(allLines []*models.SourceLine, query Query) []*models.Sou
 			matchedLines = append(matchedLines, sl)
 		}
 	}
-
-	// If no matches found, try to find any function with this name at this location
-	if len(matchedLines) == 0 {
-		for _, sl := range allLines {
-			if strings.HasSuffix(sl.Filename, query.Filename) && sl.LineNumber == query.LineNumber {
-				matchedLines = append(matchedLines, sl)
-				fmt.Fprintf(os.Stderr, "Warning: using function %s instead of %s at %s:%d\n",
-					sl.FunctionName, query.FunctionName, query.Filename, query.LineNumber)
-			}
-		}
-	}
-
 	return matchedLines
 }
 
@@ -174,10 +163,14 @@ func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[st
 
 		for _, query := range section.Queries {
 			key := fmt.Sprintf("%s:%d", query.Filename, query.LineNumber)
-			item := matchedResults[key]
-
-			cumStr := common.FormatDuration(item.Cum)
-			flatStr := common.FormatDuration(item.Flat)
+			var cumStr, flatStr string
+			if item, exists := matchedResults[key]; exists {
+				cumStr = common.FormatDuration(item.Cum)
+				flatStr = common.FormatDuration(item.Flat)
+			} else {
+				cumStr = "-"
+				flatStr = "-"
+			}
 
 			fmt.Fprintf(&table, "| %s:%d | %s | %s | %s |\n", query.Filename, query.LineNumber, query.Code, flatStr, cumStr)
 		}
@@ -202,11 +195,21 @@ func (querySection QuerySection) WriteFunctionCSV(outputDir string, matchedResul
 		key := fmt.Sprintf("%s:%d", query.Filename, query.LineNumber)
 		if resultLine, exists := matchedResults[key]; exists {
 			queryResults = append(queryResults, &QueryResult{
+				Found:      true,
 				Filename:   query.Filename,
 				LineNumber: query.LineNumber,
 				Code:       query.Code,
 				Cum:        resultLine.Cum,
 				Flat:       resultLine.Flat,
+			})
+		} else {
+			queryResults = append(queryResults, &QueryResult{
+				Found:      false,
+				Filename:   query.Filename,
+				LineNumber: query.LineNumber,
+				Code:       query.Code,
+				Cum:        0,
+				Flat:       0,
 			})
 		}
 	}
@@ -232,8 +235,14 @@ func exportQueryResults(w io.Writer, results []*QueryResult) error {
 
 	// Write data rows
 	for _, result := range results {
-		cumulativeTimeStr := common.FormatDuration(result.Cum)
-		flatTimeStr := common.FormatDuration(result.Flat)
+		var cumulativeTimeStr, flatTimeStr string
+		if result.Found {
+			cumulativeTimeStr = common.FormatDuration(result.Cum)
+			flatTimeStr = common.FormatDuration(result.Flat)
+		} else {
+			cumulativeTimeStr = "-"
+			flatTimeStr = "-"
+		}
 
 		record := []string{
 			result.Filename,
@@ -261,6 +270,9 @@ func MatchQueries(querySections []QuerySection, allLines []*models.SourceLine) (
 	for _, section := range querySections {
 		for _, query := range section.Queries {
 			matchedLines := findMatchingLines(allLines, query)
+			if len(matchedLines) == 0 {
+				continue
+			}
 
 			// Create a new SourceLine to accumulate results
 			resultLine := &models.SourceLine{
