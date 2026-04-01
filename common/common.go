@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -34,12 +35,28 @@ func OpenFile(p string) (res *os.File) {
 	return
 }
 
-// FormatDuration formats a duration for display in tables
-func FormatDuration(d time.Duration) string {
+// FormatDuration formats a duration for display in tables.
+// If unit is empty, it returns the default Go duration string (e.g., "1m30s").
+// If unit is specified, it formats in that unit (e.g., "s" -> "90.00s", "ms" -> "90000.00ms").
+func FormatDuration(d time.Duration, unit string) string {
 	if d == 0 {
 		return "0ns"
 	}
-	return d.String()
+	if unit == "" {
+		return d.String()
+	}
+	switch unit {
+	case "s":
+		return fmt.Sprintf("%.2fs", d.Seconds())
+	case "ms":
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	case "us", "µs":
+		return fmt.Sprintf("%dus", d.Microseconds())
+	case "ns":
+		return fmt.Sprintf("%dns", d.Nanoseconds())
+	default:
+		return d.String()
+	}
 }
 
 /*

@@ -132,7 +132,7 @@ func findMatchingLines(allLines []*models.SourceLine, query Query) []*models.Sou
 	return matchedLines
 }
 
-func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[string]*models.SourceLine, funcStats map[string]*models.FunctionStat) string {
+func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[string]*models.SourceLine, funcStats map[string]*models.FunctionStat, unit string) string {
 	var markdownContent strings.Builder
 
 	for _, section := range querySections {
@@ -150,8 +150,8 @@ func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[st
 			fmt.Fprintf(os.Stderr, "Warning: no function stats found for %s\n", section.FunctionName)
 		}
 
-		funcFlatStr := common.FormatDuration(funcFlat)
-		funcCumStr := common.FormatDuration(funcCum)
+		funcFlatStr := common.FormatDuration(funcFlat, unit)
+		funcCumStr := common.FormatDuration(funcCum, unit)
 
 		// section title and function summary
 		fmt.Fprintf(&markdownContent, "## %s\n\n", section.FunctionName)
@@ -165,8 +165,8 @@ func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[st
 			key := fmt.Sprintf("%s:%d", query.Filename, query.LineNumber)
 			var cumStr, flatStr string
 			if item, exists := matchedResults[key]; exists {
-				cumStr = common.FormatDuration(item.Cum)
-				flatStr = common.FormatDuration(item.Flat)
+				cumStr = common.FormatDuration(item.Cum, unit)
+				flatStr = common.FormatDuration(item.Flat, unit)
 			} else {
 				cumStr = "-"
 				flatStr = "-"
@@ -181,7 +181,7 @@ func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[st
 	return markdownContent.String()
 }
 
-func (querySection QuerySection) WriteFunctionCSV(outputDir string, matchedResults map[string]*models.SourceLine) error {
+func (querySection QuerySection) WriteFunctionCSV(outputDir string, matchedResults map[string]*models.SourceLine, unit string) error {
 	csvFilename := filepath.Join(outputDir, fmt.Sprintf("%s.csv", querySection.FunctionName))
 	csvFile, err := os.Create(csvFilename)
 	if err != nil {
@@ -214,7 +214,7 @@ func (querySection QuerySection) WriteFunctionCSV(outputDir string, matchedResul
 		}
 	}
 
-	err = exportQueryResults(csvFile, queryResults)
+	err = exportQueryResults(csvFile, queryResults, unit)
 	if err != nil {
 		return fmt.Errorf("error writing CSV file: %v", err)
 	}
@@ -223,7 +223,7 @@ func (querySection QuerySection) WriteFunctionCSV(outputDir string, matchedResul
 }
 
 // exportQueryResults writes QueryResult data to CSV with header: file,line,code,cum,flat
-func exportQueryResults(w io.Writer, results []*QueryResult) error {
+func exportQueryResults(w io.Writer, results []*QueryResult, unit string) error {
 	csvWriter := csv.NewWriter(w)
 	defer csvWriter.Flush()
 
@@ -237,8 +237,8 @@ func exportQueryResults(w io.Writer, results []*QueryResult) error {
 	for _, result := range results {
 		var cumulativeTimeStr, flatTimeStr string
 		if result.Found {
-			cumulativeTimeStr = common.FormatDuration(result.Cum)
-			flatTimeStr = common.FormatDuration(result.Flat)
+			cumulativeTimeStr = common.FormatDuration(result.Cum, unit)
+			flatTimeStr = common.FormatDuration(result.Flat, unit)
 		} else {
 			cumulativeTimeStr = "-"
 			flatTimeStr = "-"

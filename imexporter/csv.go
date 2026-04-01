@@ -19,8 +19,9 @@ func New() *CSVExporter {
 	return &CSVExporter{}
 }
 
-// Export writes the source line data to a CSV writer
-func (e *CSVExporter) Export(w io.Writer, lines []*models.SourceLine) error {
+// Export writes the source line data to a CSV writer.
+// unit specifies the time unit for output (e.g., "s", "ms", "us", "ns"). Empty string uses default format.
+func (e *CSVExporter) Export(w io.Writer, lines []*models.SourceLine, unit string) error {
 	csvWriter := csv.NewWriter(w)
 	defer csvWriter.Flush()
 
@@ -33,8 +34,8 @@ func (e *CSVExporter) Export(w io.Writer, lines []*models.SourceLine) error {
 	// Write data rows
 	for _, line := range lines {
 		// Convert nanoseconds to human-readable time format (e.g., 1.234ms)
-		cumulativeTimeStr := common.FormatDuration(time.Duration(line.Cum))
-		flatTimeStr := common.FormatDuration(time.Duration(line.Flat))
+		cumulativeTimeStr := common.FormatDuration(time.Duration(line.Cum), unit)
+		flatTimeStr := common.FormatDuration(time.Duration(line.Flat), unit)
 
 		record := []string{
 			line.Filename,

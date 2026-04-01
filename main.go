@@ -19,6 +19,7 @@ func main() {
 		outputFile  = flag.String("o", "", "Output CSV file (default: stdout)")
 		inputFile   = flag.String("i", "", "Input pprof profile file")
 		showFrom    = flag.String("show_from", "", "Only include samples whose stacktrace contains this function")
+		unit        = flag.String("unit", "", "Time unit for output (s, ms, us, ns). Empty string uses default format")
 	)
 
 	// Parse flags
@@ -71,7 +72,7 @@ func main() {
 		defer output.Close()
 	}
 
-	err = csvExporter.Export(output, sourceLines)
+	err = csvExporter.Export(output, sourceLines, *unit)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error exporting CSV: %v\n", err)
 		os.Exit(1)

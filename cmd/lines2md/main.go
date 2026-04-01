@@ -17,6 +17,7 @@ var (
 	queryFile    = flag.String("q", "", "Query file containing lines to analyze")
 	outputDir    = flag.String("dir", ".", "Output directory for results")
 	showFrom     = flag.String("show_from", "", "Only include samples whose stacktrace contains this function")
+	unit         = flag.String("unit", "", "Time unit for output (s, ms, us, ns). Empty string uses default format")
 )
 
 func init() {
@@ -86,22 +87,22 @@ func main() {
 	matchedResults := qlib.MatchQueries(querySections, allLines)
 
 	// Generate and write CSV files for each function
-	exportMatchedResults(querySections, matchedResults, funcStats)
+	exportMatchedResults(querySections, matchedResults, funcStats, *unit)
 }
 
-func exportMatchedResults(querySections []qlib.QuerySection, matchedResults map[string]*models.SourceLine, funcStats map[string]*models.FunctionStat) {
+func exportMatchedResults(querySections []qlib.QuerySection, matchedResults map[string]*models.SourceLine, funcStats map[string]*models.FunctionStat, unit string) {
 	for _, section := range querySections {
 		if len(section.Queries) == 0 {
 			continue
 		}
 
-		if err := section.WriteFunctionCSV(*outputDir, matchedResults); err != nil {
+		if err := section.WriteFunctionCSV(*outputDir, matchedResults, unit); err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
 	}
 
 	// Generate and write markdown content (includes per-function flat/cum summary)
-	markdownContent := qlib.GenerateMarkdownContent(querySections, matchedResults, funcStats)
+	markdownContent := qlib.GenerateMarkdownContent(querySections, matchedResults, funcStats, unit)
 	if err := writeCollectMD(markdownContent); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
