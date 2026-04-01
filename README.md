@@ -15,3 +15,8 @@ Features:
 - Go MemProfile format: [`writeHeapProto`](https://github.com/golang/go/blob/go1.24.2/src/runtime/pprof/protomem.go#L16-L68)
     - [ ] Go MemProfile is not supported yet.
 
+## lines2md
+
+- `-show_from`, 只打印特定函数调用下的样本
+- `unit`，执行时间单位
+- `csv-funcstat`，在csv中额外打印函数的flat/cum指标
