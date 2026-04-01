@@ -13,11 +13,12 @@ import (
 
 // CLI flags
 var (
-	inputProfile = flag.String("i", "", "Input pprof profile file")
-	queryFile    = flag.String("q", "", "Query file containing lines to analyze")
-	outputDir    = flag.String("dir", ".", "Output directory for results")
-	showFrom     = flag.String("show_from", "", "Only include samples whose stacktrace contains this function")
-	unit         = flag.String("unit", "", "Time unit for output (s, ms, us, ns). Empty string uses default format")
+	inputProfile  = flag.String("i", "", "Input pprof profile file")
+	queryFile     = flag.String("q", "", "Query file containing lines to analyze")
+	outputDir     = flag.String("dir", ".", "Output directory for results")
+	showFrom      = flag.String("show_from", "", "Only include samples whose stacktrace contains this function")
+	unit          = flag.String("unit", "", "Time unit for output (s, ms, us, ns). Empty string uses default format")
+	funcStatInCSV = flag.Bool("csv-funcstat", false, "Print flat and cum of query function in csv")
 )
 
 func init() {
@@ -96,7 +97,12 @@ func exportMatchedResults(querySections []qlib.QuerySection, matchedResults map[
 			continue
 		}
 
-		if err := section.WriteFunctionCSV(*outputDir, matchedResults, unit); err != nil {
+		var funcStat *models.FunctionStat
+		if *funcStatInCSV {
+			funcStat = funcStats[section.FunctionName]
+		}
+
+		if err := section.WriteFunctionCSV(*outputDir, matchedResults, funcStat, unit); err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
 	}

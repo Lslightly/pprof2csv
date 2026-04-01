@@ -181,7 +181,7 @@ func GenerateMarkdownContent(querySections []QuerySection, matchedResults map[st
 	return markdownContent.String()
 }
 
-func (querySection QuerySection) WriteFunctionCSV(outputDir string, matchedResults map[string]*models.SourceLine, unit string) error {
+func (querySection QuerySection) WriteFunctionCSV(outputDir string, matchedResults map[string]*models.SourceLine, funcStat *models.FunctionStat, unit string) error {
 	csvFilename := filepath.Join(outputDir, fmt.Sprintf("%s.csv", querySection.FunctionName))
 	csvFile, err := os.Create(csvFilename)
 	if err != nil {
@@ -212,6 +212,16 @@ func (querySection QuerySection) WriteFunctionCSV(outputDir string, matchedResul
 				Flat:       0,
 			})
 		}
+	}
+	if funcStat != nil {
+		queryResults = append(queryResults, &QueryResult{
+			Found:      true,
+			Filename:   "",
+			LineNumber: 0,
+			Code:       funcStat.FunctionName,
+			Cum:        funcStat.Cum,
+			Flat:       funcStat.Flat,
+		})
 	}
 
 	err = exportQueryResults(csvFile, queryResults, unit)
