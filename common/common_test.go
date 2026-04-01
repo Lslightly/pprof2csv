@@ -13,13 +13,18 @@ func TestFormatDuration(t *testing.T) {
 	}{
 		{
 			in:   "1m10s",
-			want: "70.00s",
+			want: "70.00",
 			unit: "s",
 		},
 		{
 			in:   "3s720ms",
-			want: "3720ms",
+			want: "3720",
 			unit: "ms",
+		},
+		{
+			in:   "720ms",
+			want: "0.72",
+			unit: "s",
 		},
 	}
 	for _, tc := range testCases {

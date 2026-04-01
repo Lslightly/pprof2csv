@@ -47,13 +47,13 @@ func FormatDuration(d time.Duration, unit string) string {
 	}
 	switch unit {
 	case "s":
-		return fmt.Sprintf("%.2fs", d.Seconds())
+		return fmt.Sprintf("%.2f", d.Seconds())
 	case "ms":
-		return fmt.Sprintf("%dms", d.Milliseconds())
+		return fmt.Sprintf("%d", d.Milliseconds())
 	case "us", "µs":
-		return fmt.Sprintf("%dus", d.Microseconds())
+		return fmt.Sprintf("%d", d.Microseconds())
 	case "ns":
-		return fmt.Sprintf("%dns", d.Nanoseconds())
+		return fmt.Sprintf("%d", d.Nanoseconds())
 	default:
 		return d.String()
 	}
