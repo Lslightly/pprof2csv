@@ -118,13 +118,13 @@ func ParseQueryFile(filename string) ([]QuerySection, error) {
 	return result, nil
 }
 
+// findMatchingLines check only filename and line number
 func findMatchingLines(allLines []*models.SourceLine, query Query) []*models.SourceLine {
 	var matchedLines []*models.SourceLine
 	for _, sl := range allLines {
 		// Check if filename ends with the queried path (supporting suffix matching)
 		// And check if function name matches and line number matches
 		if strings.HasSuffix(sl.Filename, query.Filename) &&
-			sl.FunctionName == query.FunctionName &&
 			sl.LineNumber == query.LineNumber {
 			matchedLines = append(matchedLines, sl)
 		}
