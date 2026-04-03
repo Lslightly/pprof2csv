@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Lslightly/pprof2csv/analyzer"
 	"github.com/Lslightly/pprof2csv/common"
 	"github.com/Lslightly/pprof2csv/imexporter"
 	"github.com/Lslightly/pprof2csv/models"
@@ -42,4 +43,12 @@ func TestLoop(t *testing.T) {
 	defer csvFile.Close()
 	sls := imexporter.Import(csvFile)
 	assertCum(t, common.ParseDuration("6.05s"), sls, "pprof2csv/testdata/test.go", 69)
+}
+
+func TestGetTotalProfileTime(t *testing.T) {
+	totalT, err := analyzer.GetTotalProfileTime(filepath.Join(common.CurFileDir(), "loop/cpu.pprof"))
+	assert.Nil(t, err)
+	exp, err := time.ParseDuration("6.17s") // Duration: 6.42s, Total samples = 6.17s (96.14%)
+	assert.Nil(t, err)
+	assert.Equal(t, exp, totalT)
 }

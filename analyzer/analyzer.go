@@ -172,3 +172,28 @@ func LoadProfileData(filename string, showFrom string) ([]*models.SourceLine, er
 	allLines, _, err := LoadProfileDataWithFunctionStats(filename, showFrom)
 	return allLines, err
 }
+
+// GetTotalProfileTime calculates the total time by summing all sample values in the profile.
+// This returns the actual total profile time regardless of any filtering.
+func GetTotalProfileTime(filename string) (time.Duration, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return 0, fmt.Errorf("error loading profile: %v", err)
+	}
+
+	p, err := profile.ParseData(data)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse profile data: %w", err)
+	}
+
+	timeUnit := convTimeUnit(p.SampleType[1].Unit)
+	var total int64
+
+	for _, sample := range p.Sample {
+		if len(sample.Value) > 1 {
+			total += sample.Value[1]
+		}
+	}
+
+	return time.Duration(total) * timeUnit, nil
+}
