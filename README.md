@@ -17,6 +17,11 @@ Features:
 
 ## lines2md
 
-- `-show_from`, 只打印特定函数调用下的样本
-- `unit`，执行时间单位
-- `csv-funcstat`，在csv中额外打印函数的flat/cum指标
+- `-show_from`, only consider samples whose stackframe contains the function indicated by show_from
+- `unit`，result time unit
+- `csv-funcstat`，print function flat/cum in csv
+
+## mallocgc_percent
+
+Calculate mallocgc percent in total profile time or certain function time.
+
