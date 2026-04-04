@@ -5,9 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
-	"github.com/Lslightly/pprof2csv/analyzer"
+	"github.com/Lslightly/pprof2csv/cmd/mallocgc_percent/lib"
 )
 
 var (
@@ -30,56 +29,6 @@ func validateFlags() error {
 	return nil
 }
 
-type Result struct {
-	MallocgcTime  time.Duration `json:"mallocgc_time"`
-	Denominator   time.Duration `json:"denominator"`
-	Percentage    float64       `json:"percentage"`
-	ShowFrom      string        `json:"show_from,omitempty"`
-	DenomFuncName string        `json:"denom_func_name,omitempty"`
-}
-
-func mallocgcPercent(profilePath, showFrom, denomFunc string) (Result, error) {
-	_, funcStats, err := analyzer.LoadProfileDataWithFunctionStats(profilePath, showFrom)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading profile: %v\n", err)
-		os.Exit(1)
-	}
-
-	_, mallocgcTime := analyzer.SumFuncTime(funcStats, func(name string) bool { return name == "runtime.mallocgc" })
-
-	var denominator time.Duration
-
-	if denomFunc != "" {
-		if stat, exists := funcStats[denomFunc]; exists {
-			denominator = stat.Cum
-		} else {
-			if showFrom != "" {
-				return Result{}, fmt.Errorf("Error: denominator function '%s' not found in profile when filtered by show_from '%s'\n", denomFunc, showFrom)
-			} else {
-				return Result{}, fmt.Errorf("Error: denominator function '%s' not found in profile\n", denomFunc)
-			}
-		}
-	} else {
-		denominator, err = analyzer.GetTotalProfileTime(*inputProfile)
-		if err != nil {
-			return Result{}, fmt.Errorf("Error getting total profile time: %v\n", err)
-		}
-	}
-
-	if denominator == 0 {
-		return Result{}, fmt.Errorf("Error: denominator is zero, cannot calculate percentage")
-	}
-
-	percentage := float64(mallocgcTime) / float64(denominator) * 100
-	return Result{
-		MallocgcTime:  mallocgcTime,
-		Denominator:   denominator,
-		DenomFuncName: denomFunc,
-		ShowFrom:      showFrom,
-		Percentage:    percentage,
-	}, nil
-}
-
 func main() {
 	flag.Parse()
 	if err := validateFlags(); err != nil {
@@ -88,7 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	result, err := mallocgcPercent(*inputProfile, *showFrom, *denomFunc)
+	result, err := lib.MallocgcPercent(*inputProfile, *showFrom, *denomFunc)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

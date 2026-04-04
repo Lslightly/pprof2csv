@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"path/filepath"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestMallocgcPercent(t *testing.T) {
-	res, err := mallocgcPercent(filepath.Join(common.RootDir(), "test/go_parser/default.out"), "go/parser.BenchmarkParseOnly", "go/parser.BenchmarkParseOnly")
+	res, err := MallocgcPercent(filepath.Join(common.RootDir(), "test/go_parser/default.out"), "go/parser.BenchmarkParseOnly", "go/parser.BenchmarkParseOnly")
 	assert.Nil(t, err)
 	assert.Equal(t, 43.28628302569671, res.Percentage)
 }
