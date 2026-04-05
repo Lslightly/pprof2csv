@@ -204,22 +204,24 @@ func GetTotalProfileTime(filename string) (time.Duration, error) {
 //   - filename: path to the pprof profile file
 //   - callee: the target function name to find in the call stack
 //   - k: the number of hops up the call stack to find the caller (k=1 for direct caller)
+//   - showFrom: if non-empty, only samples whose stacktrace contains this function are included
 //
 // Returns:
 //   - []string: unique set of k-hop caller function names
 //   - error: an error if the callee is not found in the profile or if the profile cannot be parsed
 //
 // The function searches through all sample call stacks in the profile.
+// If showFrom is non-empty, only samples containing showFrom in their call stack are considered.
 // For each sample, it finds the callee in the call stack and then returns the function
 // name that is k positions above it in the stack. The result is deduplicated before returning.
 //
 // Example:
 //
 //	If the call stack is: [main] -> [foo] -> [bar] -> [baz] (where baz is the leaf)
-//	- GetCallerKNameSet("profile.pprof", "baz", 1) returns ["bar"]
-//	- GetCallerKNameSet("profile.pprof", "baz", 2) returns ["foo"]
-//	- GetCallerKNameSet("profile.pprof", "baz", 3) returns ["main"]
-func GetCallerKNameSet(filename string, callee string, k int) (result []string, err error) {
+//	- GetCallerKNameSet("profile.pprof", "baz", 1, "") returns ["bar"]
+//	- GetCallerKNameSet("profile.pprof", "baz", 2, "") returns ["foo"]
+//	- GetCallerKNameSet("profile.pprof", "baz", 3, "") returns ["main"]
+func GetCallerKNameSet(filename string, callee string, k int, showFrom string) (result []string, err error) {
 	// Load and parse profile data
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -236,6 +238,23 @@ func GetCallerKNameSet(filename string, callee string, k int) (result []string, 
 
 	// Process each sample's call stack
 	for _, sample := range p.Sample {
+		// Filter: skip sample if showFrom specified but not found in stacktrace
+		if showFrom != "" {
+			found := false
+		locationLoop:
+			for _, loc := range sample.Location {
+				for _, le := range loc.Line {
+					if le.Function != nil && le.Function.Name == showFrom {
+						found = true
+						break locationLoop
+					}
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
 		// Search for callee in the call stack
 		for calleeIdx, loc := range sample.Location {
 			// Skip locations without lines
@@ -294,22 +313,24 @@ func GetCallerKNameSet(filename string, callee string, k int) (result []string, 
 //   - filename: path to the pprof profile file
 //   - caller: the target function name to find in the call stack
 //   - k: the number of hops down the call stack to find the callee (k=1 for direct callee)
+//   - showFrom: if non-empty, only samples whose stacktrace contains this function are included
 //
 // Returns:
 //   - []string: unique set of k-hop callee function names
 //   - error: an error if the caller is not found in the profile or if the profile cannot be parsed
 //
 // The function searches through all sample call stacks in the profile.
+// If showFrom is non-empty, only samples containing showFrom in their call stack are considered.
 // For each sample, it finds the caller in the call stack and then returns the function
 // name that is k positions below it in the stack. The result is deduplicated before returning.
 //
 // Example:
 //
 //	If the call stack is: [main] -> [foo] -> [bar] -> [baz] (where baz is the leaf)
-//	- GetCalleeKNameSet("profile.pprof", "main", 1) returns ["foo"]
-//	- GetCalleeKNameSet("profile.pprof", "main", 2) returns ["bar"]
-//	- GetCalleeKNameSet("profile.pprof", "main", 3) returns ["baz"]
-func GetCalleeKNameSet(filename string, caller string, k int) (result []string, err error) {
+//	- GetCalleeKNameSet("profile.pprof", "main", 1, "") returns ["foo"]
+//	- GetCalleeKNameSet("profile.pprof", "main", 2, "") returns ["bar"]
+//	- GetCalleeKNameSet("profile.pprof", "main", 3, "") returns ["baz"]
+func GetCalleeKNameSet(filename string, caller string, k int, showFrom string) (result []string, err error) {
 	// Load and parse profile data
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -326,6 +347,23 @@ func GetCalleeKNameSet(filename string, caller string, k int) (result []string, 
 
 	// Process each sample's call stack
 	for _, sample := range p.Sample {
+		// Filter: skip sample if showFrom specified but not found in stacktrace
+		if showFrom != "" {
+			found := false
+		locationLoop:
+			for _, loc := range sample.Location {
+				for _, le := range loc.Line {
+					if le.Function != nil && le.Function.Name == showFrom {
+						found = true
+						break locationLoop
+					}
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
 		// Search for caller in the call stack
 		for callerIdx, loc := range sample.Location {
 			// Skip locations without lines
