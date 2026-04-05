@@ -52,3 +52,36 @@ func TestGetTotalProfileTime(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, exp, totalT)
 }
+
+func TestGetCallerKNameSet(t *testing.T) {
+	// Test that mallocgc's 1-hop caller is only runtime.newobject
+	callers, err := analyzer.GetCallerKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.mallocgc", 1)
+	assert.Nil(t, err)
+
+	// Verify that the result contains only runtime.newobject
+	assert.Len(t, callers, 6, "mallocgc should have exactly 6 1-hop caller")
+	assert.Contains(t, callers, "runtime.newobject", "1-hop caller should be runtime.newobject")
+}
+
+func TestGetCallerKNameSet_NotFound(t *testing.T) {
+	// Test case when callee function does not exist
+	_, err := analyzer.GetCallerKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "nonexistent_function", 1)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "not found in the profile")
+}
+
+func TestGetCalleeKNameSet(t *testing.T) {
+	// Test that runtime.newobject's 1-hop callee is runtime.mallocgc
+	callees, err := analyzer.GetCalleeKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.newobject", 1)
+	assert.Nil(t, err)
+
+	// Verify that the result contains runtime.mallocgc
+	assert.Contains(t, callees, "runtime.mallocgc", "1-hop callee should be runtime.mallocgc")
+}
+
+func TestGetCalleeKNameSet_NotFound(t *testing.T) {
+	// Test case when caller function does not exist
+	_, err := analyzer.GetCalleeKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "nonexistent_function", 1)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "not found in the profile")
+}
