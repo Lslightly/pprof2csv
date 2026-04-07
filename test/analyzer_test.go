@@ -106,3 +106,49 @@ func TestGetCalleeKNameSet_NotFound(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "not found in the profile")
 }
+
+func TestGetCallerPercentage(t *testing.T) {
+	// Test getting caller percentages for runtime.mallocgc
+	percentages, totalDuration, err := analyzer.GetCallerPercentage(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.mallocgc", "")
+	assert.Nil(t, err)
+
+	// Verify total duration is not zero
+	assert.Greater(t, totalDuration, time.Duration(0), "Total duration should be greater than zero")
+
+	// Verify percentages sum to approximately 100%
+	var totalPercentage float64
+	for caller, pct := range percentages {
+		totalPercentage += pct
+		t.Logf("Caller: %s, Percentage: %.2f%%", caller, pct)
+	}
+	assert.InDelta(t, 100.0, totalPercentage, 0.1, "Total percentage should be approximately 100%")
+
+	// Verify runtime.newobject is among the callers (based on TestGetCallerKNameSet result)
+	_, hasNewobject := percentages["runtime.newobject"]
+	assert.True(t, hasNewobject, "runtime.newobject should be a caller of mallocgc")
+}
+
+func TestGetCallerPercentage_WithShowFrom(t *testing.T) {
+	// Test with showFrom parameter
+	// Filter samples that only contain "runtime.newobject"
+	percentages, totalDuration, err := analyzer.GetCallerPercentage(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.mallocgc", "runtime.newobject")
+	assert.Nil(t, err)
+
+	// Verify that only runtime.newobject is in the caller set
+	assert.Len(t, percentages, 1, "Should have exactly 1 caller when showFrom is runtime.newobject")
+	assert.Contains(t, percentages, "runtime.newobject", "Caller should be runtime.newobject")
+
+	// Verify the percentage is 100% (filtered samples all go through newobject)
+	_, pct := percentages["runtime.newobject"]
+	assert.InDelta(t, 100.0, pct, 0.1, "Percentage should be 100% when showFrom is specified")
+
+	// Total duration should still be valid
+	assert.Greater(t, totalDuration, time.Duration(0))
+}
+
+func TestGetCallerPercentage_NotFound(t *testing.T) {
+	// Test case when target function does not exist
+	_, _, err := analyzer.GetCallerPercentage(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "nonexistent_function", "")
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "not found in the profile")
+}
