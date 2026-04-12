@@ -9,6 +9,8 @@ import (
 	"github.com/google/pprof/profile"
 )
 
+const debugCallChain bool = false
+
 // TrieNode represents a node in a call tree (Trie structure)
 type TrieNode struct {
 	name     string
@@ -91,6 +93,17 @@ func traverseTreeForLeaves(node *TrieNode, visitor func(*TrieNode)) {
 	}
 }
 
+func findShowFrom(locs []*profile.Location, showFrom string) (found bool) {
+	for _, loc := range locs {
+		for _, le := range loc.Line {
+			if le.Function != nil && le.Function.Name == showFrom {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // GetCallerKNameSet retrieves the set of k-hop caller function names for a given callee.
 //
 // Parameters:
@@ -132,20 +145,8 @@ func GetCallerKNameSet(filename string, callee string, k int, showFrom string) (
 	// Process each sample's call stack
 	for _, sample := range p.Sample {
 		// Filter: skip sample if showFrom specified but not found in stacktrace
-		if showFrom != "" {
-			found := false
-		locationLoop:
-			for _, loc := range sample.Location {
-				for _, le := range loc.Line {
-					if le.Function != nil && le.Function.Name == showFrom {
-						found = true
-						break locationLoop
-					}
-				}
-			}
-			if !found {
-				continue
-			}
+		if showFrom != "" && !findShowFrom(sample.Location, showFrom) {
+			continue
 		}
 
 		// Search for callee in the call stack
@@ -156,33 +157,34 @@ func GetCallerKNameSet(filename string, callee string, k int, showFrom string) (
 			}
 
 			// Check if any line in this location matches the callee
+			// Only check line0
 			isCallee := false
-			for _, lineEntry := range loc.Line {
-				if lineEntry.Function != nil && lineEntry.Function.Name == callee {
-					isCallee = true
-					break
-				}
+			line0 := loc.Line[0]
+			if line0.Function != nil && line0.Function.Name == callee {
+				isCallee = true
 			}
 
-			if isCallee {
-				calleeFound = true
-				// Calculate the index of the k-hop caller
-				callerIdx := calleeIdx + k
+			if !isCallee {
+				continue
+			}
 
-				// Check if caller index is within valid range
-				if callerIdx >= 0 && callerIdx < len(sample.Location) {
-					callerLoc := sample.Location[callerIdx]
+			calleeFound = true
+			// Calculate the index of the k-hop caller
+			callerIdx := calleeIdx + k
 
-					// Get function name from caller location
-					for _, lineEntry := range callerLoc.Line {
-						if lineEntry.Function != nil && lineEntry.Function.Name != "" {
-							callerSet[lineEntry.Function.Name] = struct{}{}
-							break // Only need one function name per location
-						}
+			// Check if caller index is within valid range
+			if callerIdx >= 0 && callerIdx < len(sample.Location) {
+				callerLoc := sample.Location[callerIdx]
+
+				// Get function name from caller location
+				for _, lineEntry := range callerLoc.Line {
+					if lineEntry.Function != nil && lineEntry.Function.Name != "" {
+						callerSet[lineEntry.Function.Name] = struct{}{}
+						break // Only need one function name per location
 					}
 				}
-				break // Found callee in this sample, move to next sample
 			}
+			break // Found callee in this sample, move to next sample
 		}
 	}
 
@@ -241,20 +243,8 @@ func GetCalleeKNameSet(filename string, caller string, k int, showFrom string) (
 	// Process each sample's call stack
 	for _, sample := range p.Sample {
 		// Filter: skip sample if showFrom specified but not found in stacktrace
-		if showFrom != "" {
-			found := false
-		locationLoop:
-			for _, loc := range sample.Location {
-				for _, le := range loc.Line {
-					if le.Function != nil && le.Function.Name == showFrom {
-						found = true
-						break locationLoop
-					}
-				}
-			}
-			if !found {
-				continue
-			}
+		if showFrom != "" && !findShowFrom(sample.Location, showFrom) {
+			continue
 		}
 
 		// Search for caller in the call stack
@@ -266,32 +256,30 @@ func GetCalleeKNameSet(filename string, caller string, k int, showFrom string) (
 
 			// Check if any line in this location matches the caller
 			isCaller := false
-			for _, lineEntry := range loc.Line {
-				if lineEntry.Function != nil && lineEntry.Function.Name == caller {
-					isCaller = true
-					break
-				}
+			l0 := loc.Line[0]
+			if l0.Function != nil && l0.Function.Name == caller {
+				isCaller = true
+			}
+			if !isCaller {
+				continue
 			}
 
-			if isCaller {
-				callerFound = true
-				// Calculate the index of the k-hop callee
-				calleeIdx := callerIdx - k
+			callerFound = true
+			// Calculate the index of the k-hop callee
+			calleeIdx := callerIdx - k
 
-				// Check if callee index is within valid range
-				if calleeIdx >= 0 && calleeIdx < len(sample.Location) {
-					calleeLoc := sample.Location[calleeIdx]
+			// Check if callee index is within valid range
+			if calleeIdx >= 0 && calleeIdx < len(sample.Location) {
+				calleeLoc := sample.Location[calleeIdx]
 
-					// Get function name from callee location
-					for _, lineEntry := range calleeLoc.Line {
-						if lineEntry.Function != nil && lineEntry.Function.Name != "" {
-							calleeSet[lineEntry.Function.Name] = struct{}{}
-							break // Only need one function name per location
-						}
+				if len(calleeLoc.Line) > 0 {
+					l0 := calleeLoc.Line[0]
+					if l0.Function != nil && l0.Function.Name != "" {
+						calleeSet[l0.Function.Name] = struct{}{}
 					}
 				}
-				break // Found caller in this sample, move to next sample
 			}
+			break // Found caller in this sample, move to next sample
 		}
 	}
 
@@ -333,6 +321,11 @@ func GetCallerPercentage(filename string, target string, showFrom string) (map[s
 	tree, leafPercentages, totalDuration, err := GetCallerChainPercentageWithTree(filename, target, 1, showFrom)
 	if err != nil {
 		return nil, 0, err
+	}
+
+	rootChildrenLen := len(tree.root.children)
+	if rootChildrenLen != 1 {
+		return nil, 0, fmt.Errorf("Trie tree root children node should only contain %s.\nBut there are %d children: %v", target, rootChildrenLen, tree.root.children)
 	}
 
 	// Extract caller percentages from the tree structure
@@ -382,20 +375,8 @@ func GetCallerChainPercentageWithTree(filename string, target string, k int, sho
 		}
 
 		// Filter: skip sample if showFrom specified but not found in stacktrace
-		if showFrom != "" {
-			found := false
-		locationLoop:
-			for _, loc := range sample.Location {
-				for _, le := range loc.Line {
-					if le.Function != nil && le.Function.Name == showFrom {
-						found = true
-						break locationLoop
-					}
-				}
-			}
-			if !found {
-				continue
-			}
+		if showFrom != "" && !findShowFrom(sample.Location, showFrom) {
+			continue
 		}
 
 		// Search for target in the call stack
@@ -405,13 +386,12 @@ func GetCallerChainPercentageWithTree(filename string, target string, k int, sho
 				continue
 			}
 
-			// Check if any line in this location matches the target
+			// Check if any line in this location matches the target.
+			// Only check line0 because functions called by target may be inlined into target
 			isTarget := false
-			for _, lineEntry := range loc.Line {
-				if lineEntry.Function != nil && lineEntry.Function.Name == target {
-					isTarget = true
-					break
-				}
+			line0 := loc.Line[0]
+			if line0.Function != nil && line0.Function.Name == target {
+				isTarget = true
 			}
 
 			if !isTarget {
@@ -422,9 +402,19 @@ func GetCallerChainPercentageWithTree(filename string, target string, k int, sho
 
 			// Build call chain slice from k-hop caller
 			chain := buildCallChainSlice(sample.Location, targetIdx, k)
+			if debugCallChain {
+				if strings.Contains(chain[0], "heapBits") {
+					for i, lineEntry := range loc.Line {
+						fmt.Printf("%d: fn %s, line %d\n", i, lineEntry.Function.Name, lineEntry.Line)
+					}
+				}
+			}
 
 			// Add to tree (returns leaf node pointer)
-			tree.AddCallChain(chain, value)
+			leaf := tree.AddCallChain(chain, value)
+			if debugCallChain {
+				fmt.Fprintln(os.Stderr, leaf)
+			}
 
 			break // Found target in this sample, move to next sample
 		}

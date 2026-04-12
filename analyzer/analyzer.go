@@ -43,20 +43,8 @@ func AnalyzeWithFunctionStats(data []byte, showFrom string) ([]*models.SourceLin
 	// Process each sample in the profile
 	for _, sample := range p.Sample {
 		// Filter: skip sample if showFrom specified but not found in stacktrace
-		if showFrom != "" {
-			found := false
-		locationLoop:
-			for _, loc := range sample.Location {
-				for _, le := range loc.Line {
-					if le.Function != nil && le.Function.Name == showFrom {
-						found = true
-						break locationLoop
-					}
-				}
-			}
-			if !found {
-				continue
-			}
+		if showFrom != "" && !findShowFrom(sample.Location, showFrom) {
+			continue
 		}
 
 		// Get the value (time) for this sample

@@ -53,9 +53,11 @@ func TestGetTotalProfileTime(t *testing.T) {
 	assert.Equal(t, exp, totalT)
 }
 
+var goParserDefaultProfile string = filepath.Join(common.CurFileDir(), "go_parser/default.out")
+
 func TestGetCallerKNameSet(t *testing.T) {
 	// Test that mallocgc's 1-hop caller is only runtime.newobject
-	callers, err := analyzer.GetCallerKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.mallocgc", 1, "")
+	callers, err := analyzer.GetCallerKNameSet(goParserDefaultProfile, "runtime.mallocgc", 1, "")
 	assert.Nil(t, err)
 
 	// Verify that the result contains only runtime.newobject
@@ -66,7 +68,7 @@ func TestGetCallerKNameSet(t *testing.T) {
 func TestGetCallerKNameSet_WithShowFrom(t *testing.T) {
 	// Test with showFrom parameter
 	// When showFrom is specified, only samples containing that function are considered
-	callers, err := analyzer.GetCallerKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.mallocgc", 1, "runtime.newobject")
+	callers, err := analyzer.GetCallerKNameSet(goParserDefaultProfile, "runtime.mallocgc", 1, "runtime.newobject")
 	assert.Nil(t, err)
 
 	assert.Len(t, callers, 1)
@@ -76,14 +78,14 @@ func TestGetCallerKNameSet_WithShowFrom(t *testing.T) {
 
 func TestGetCallerKNameSet_NotFound(t *testing.T) {
 	// Test case when callee function does not exist
-	_, err := analyzer.GetCallerKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "nonexistent_function", 1, "")
+	_, err := analyzer.GetCallerKNameSet(goParserDefaultProfile, "nonexistent_function", 1, "")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "not found in the profile")
 }
 
 func TestGetCalleeKNameSet(t *testing.T) {
 	// Test that runtime.newobject's 1-hop callee is runtime.mallocgc
-	callees, err := analyzer.GetCalleeKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.newobject", 1, "")
+	callees, err := analyzer.GetCalleeKNameSet(goParserDefaultProfile, "runtime.newobject", 1, "")
 	assert.Nil(t, err)
 
 	// Verify that the result contains runtime.mallocgc
@@ -93,7 +95,7 @@ func TestGetCalleeKNameSet(t *testing.T) {
 func TestGetCalleeKNameSet_WithShowFrom(t *testing.T) {
 	// Test with showFrom parameter
 	// When showFrom is specified, only samples containing that function are considered
-	callees, err := analyzer.GetCalleeKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.newobject", 1, "")
+	callees, err := analyzer.GetCalleeKNameSet(goParserDefaultProfile, "runtime.newobject", 1, "")
 	assert.Nil(t, err)
 
 	// The result should be filtered based on showFrom
@@ -102,14 +104,14 @@ func TestGetCalleeKNameSet_WithShowFrom(t *testing.T) {
 
 func TestGetCalleeKNameSet_NotFound(t *testing.T) {
 	// Test case when caller function does not exist
-	_, err := analyzer.GetCalleeKNameSet(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "nonexistent_function", 1, "")
+	_, err := analyzer.GetCalleeKNameSet(goParserDefaultProfile, "nonexistent_function", 1, "")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "not found in the profile")
 }
 
 func TestGetCallerPercentage(t *testing.T) {
 	// Test getting caller percentages for runtime.mallocgc
-	percentages, totalDuration, err := analyzer.GetCallerPercentage(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.mallocgc", "")
+	percentages, totalDuration, err := analyzer.GetCallerPercentage(goParserDefaultProfile, "runtime.mallocgc", "")
 	assert.Nil(t, err)
 
 	// Verify total duration is not zero
@@ -131,7 +133,7 @@ func TestGetCallerPercentage(t *testing.T) {
 func TestGetCallerPercentage_WithShowFrom(t *testing.T) {
 	// Test with showFrom parameter
 	// Filter samples that only contain "runtime.newobject"
-	percentages, totalDuration, err := analyzer.GetCallerPercentage(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "runtime.mallocgc", "runtime.newobject")
+	percentages, totalDuration, err := analyzer.GetCallerPercentage(goParserDefaultProfile, "runtime.mallocgc", "runtime.newobject")
 	assert.Nil(t, err)
 
 	// Verify that only runtime.newobject is in the caller set
@@ -139,8 +141,8 @@ func TestGetCallerPercentage_WithShowFrom(t *testing.T) {
 	assert.Contains(t, percentages, "runtime.newobject", "Caller should be runtime.newobject")
 
 	// Verify the percentage is 100% (filtered samples all go through newobject)
-	_, pct := percentages["runtime.newobject"]
-	assert.InDelta(t, 100.0, pct, 0.1, "Percentage should be 100% when showFrom is specified")
+	pct, _ := percentages["runtime.newobject"]
+	assert.InDelta(t, 100.0, pct, 0.1, `Percentage should be 100% when showFrom is specified`)
 
 	// Total duration should still be valid
 	assert.Greater(t, totalDuration, time.Duration(0))
@@ -148,7 +150,7 @@ func TestGetCallerPercentage_WithShowFrom(t *testing.T) {
 
 func TestGetCallerPercentage_NotFound(t *testing.T) {
 	// Test case when target function does not exist
-	_, _, err := analyzer.GetCallerPercentage(filepath.Join(common.CurFileDir(), "go_parser/default.out"), "nonexistent_function", "")
+	_, _, err := analyzer.GetCallerPercentage(goParserDefaultProfile, "nonexistent_function", "")
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "not found in the profile")
 }
