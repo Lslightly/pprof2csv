@@ -1,2 +1,4 @@
 pprof2csv
 .vscode
+schema_export
+tmp_output
