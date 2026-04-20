@@ -10,15 +10,15 @@ Go CPU Profile 使用 [protobuf](https://developers.google.com/protocol-buffers)
 
 | 字段 | 类型 | 说明 | Proto 链接 |
 |------|------|------|------------|
-| sample_type | ValueType[] | 描述样本值的类型和单位 | [sample_type](https://github.com/google/pprof/blob/main/proto/profile.proto#L47-L53) |
-| sample | Sample[] | 记录的所有样本 | [sample](https://github.com/google/pprof/blob/main/proto/profile.proto#L47-L53) |
-| mapping | Mapping[] | 地址范围到二进制文件的映射 | [mapping](https://github.com/google/pprof/blob/main/proto/profile.proto#L47-L53) |
-| location | Location[] | 样本引用的位置信息 | [location](https://github.com/google/pprof/blob/main/proto/profile.proto#L47-L53) |
-| function | Function[] | 位置引用的函数信息 | [function](https://github.com/google/pprof/blob/main/proto/profile.proto#L47-L53) |
-| string_table | string[] | 共享字符串表 | [string_table](https://github.com/google/pprof/blob/main/proto/profile.proto#L47-L53) |
-| period | int64 | 采样间隔（每个样本的事件数） | [period](https://github.com/google/pprof/blob/main/proto/profile.proto#L84) |
-| time_nanos | int64 | 采集时间 | [time_nanos](https://github.com/google/pprof/blob/main/proto/profile.proto#L73) |
-| duration_nanos | int64 | 采集持续时间 | [duration_nanos](https://github.com/google/pprof/blob/main/proto/profile.proto#L76) |
+| sample_type | ValueType[] | 描述样本值的类型和单位 | [sample_type](profile.proto#L55) |
+| sample | Sample[] | 记录的所有样本 | [sample](profile.proto#L57) |
+| mapping | Mapping[] | 地址范围到二进制文件的映射 | [mapping](profile.proto#L60) |
+| location | Location[] | 样本引用的位置信息 | [location](profile.proto#L62) |
+| function | Function[] | 位置引用的函数信息 | [function](profile.proto#L64) |
+| string_table | string[] | 共享字符串表 | [string_table](profile.proto#L67) |
+| period | int64 | 采样间隔（每个样本的事件数） | [period](profile.proto#L86) |
+| time_nanos | int64 | 采集时间 | [time_nanos](profile.proto#L79) |
+| duration_nanos | int64 | 采集持续时间 | [duration_nanos](profile.proto#L81) |
 
 ### 2. Go CPU Profile 的 sample_type
 
@@ -31,37 +31,37 @@ Go CPU Profile 使用 [protobuf](https://developers.google.com/protocol-buffers)
 
 | 字段 | 类型 | 说明 | Proto 链接 |
 |------|------|------|------------|
-| location_id | uint64[] | 调用栈位置ID数组，location_id[0] 是栈顶（leaf） | [location_id](https://github.com/google/pprof/blob/main/proto/profile.proto#L95-L102) |
-| value | int64[] | 对应 sample_type 的值，对于 CPU profile：<br>- value[0]: 样本计数<br>- value[1]: CPU 时间 (count * period) | [value](https://github.com/google/pprof/blob/main/proto/profile.proto#L95-L102) |
-| label | Label[] | 额外上下文信息（如线程ID） | [label](https://github.com/google/pprof/blob/main/proto/profile.proto#L95-L102) |
+| location_id | uint64[] | 调用栈位置ID数组，location_id[0] 是栈顶（leaf） | [location_id](profile.proto#L117) |
+| value | int64[] | 对应 sample_type 的值，对于 CPU profile：<br>- value[0]: 样本计数<br>- value[1]: CPU 时间 (count * period) | [value](profile.proto#L124) |
+| label | Label[] | 额外上下文信息（如线程ID） | [label](profile.proto#L133) |
 
 ### 4. Location Message (代码位置)
 
 | 字段 | 类型 | 说明 | Proto 链接 |
 |------|------|------|------------|
-| id | uint64 | 唯一标识符 | [id](https://github.com/google/pprof/blob/main/proto/profile.proto#L154-L171) |
-| mapping_id | uint64 | 关联的 Mapping ID | [mapping_id](https://github.com/google/pprof/blob/main/proto/profile.proto#L154-L171) |
-| address | uint64 | 指令地址 | [address](https://github.com/google/pprof/blob/main/proto/profile.proto#L154-L171) |
-| line | Line[] | 内联函数信息数组，最后一个条目是调用者 | [line](https://github.com/google/pprof/blob/main/proto/profile.proto#L154-L171) |
-| is_folded | bool | 是否多个符号映射到同一地址 | [is_folded](https://github.com/google/pprof/blob/main/proto/profile.proto#L154-L171) |
+| id | uint64 | 唯一标识符 | [id](profile.proto#L185) |
+| mapping_id | uint64 | 关联的 Mapping ID | [mapping_id](profile.proto#L189) |
+| address | uint64 | 指令地址 | [address](profile.proto#L195) |
+| line | Line[] | 内联函数信息数组，最后一个条目是调用者 | [line](profile.proto#L203) |
+| is_folded | bool | 是否多个符号映射到同一地址 | [is_folded](profile.proto#L209) |
 
 ### 5. Line Message (源代码行)
 
 | 字段 | 类型 | 说明 | Proto 链接 |
 |------|------|------|------------|
-| function_id | uint64 | 关联的 Function ID | [function_id](https://github.com/google/pprof/blob/main/proto/profile.proto#L174-L180) |
-| line | int64 | 源代码行号 | [line](https://github.com/google/pprof/blob/main/proto/profile.proto#L174-L180) |
-| column | int64 | 源代码列号 | [column](https://github.com/google/pprof/blob/main/proto/profile.proto#L174-L180) |
+| function_id | uint64 | 关联的 Function ID | [function_id](profile.proto#L214) |
+| line | int64 | 源代码行号 | [line](profile.proto#L216) |
+| column | int64 | 源代码列号 | [column](profile.proto#L218) |
 
 ### 6. Function Message (函数信息)
 
 | 字段 | 类型 | 说明 | Proto 链接 |
 |------|------|------|------------|
-| id | uint64 | 唯一标识符 | [id](https://github.com/google/pprof/blob/main/proto/profile.proto#L183-L198) |
-| name | int64 | 函数名（string_table 索引） | [name](https://github.com/google/pprof/blob/main/proto/profile.proto#L183-L198) |
-| system_name | int64 | 系统识别的名称 | [system_name](https://github.com/google/pprof/blob/main/proto/profile.proto#L183-L198) |
-| filename | int64 | 源文件路径 | [filename](https://github.com/google/pprof/blob/main/proto/profile.proto#L183-L198) |
-| start_line | int64 | 函数起始行号 | [start_line](https://github.com/google/pprof/blob/main/proto/profile.proto#L183-L198) |
+| id | uint64 | 唯一标识符 | [id](profile.proto#L223) |
+| name | int64 | 函数名（string_table 索引） | [name](profile.proto#L225) |
+| system_name | int64 | 系统识别的名称 | [system_name](profile.proto#L228) |
+| filename | int64 | 源文件路径 | [filename](profile.proto#L230) |
+| start_line | int64 | 函数起始行号 | [start_line](profile.proto#L232) |
 
 ## Go CPU Profile 构建细节
 
